@@ -6,8 +6,12 @@
 #  See http://bernaerts.dyndns.org/linux/74-ubuntu/309-ubuntu-dual-display-monitor-position-lost
 #  for instructions
 #
+#  See https://askubuntu.com/questions/6137/saving-monitor-settings
+#  for discussion, including relet's link to his gist with changes
+#
 #  Parameters :
-#    $1 : waiting time in sec. before forcing configuration (optional)
+#    $1 : profile name, loaded from "$HOME/.config/monitors-$1.xml"
+#    $2 : waiting time in sec. before forcing configuration (optional)
 #
 #  Revision history :
 #    19/04/2014, V1.0 - Creation by N. Bernaerts
@@ -17,12 +21,21 @@
 #    08/10/2014, V1.4 - Handle primary display parameter
 #    08/12/2014, V1.5 - Waiting time in seconds becomes a parameter
 #    06/05/2020, V1.6 - Handle scale parameter
+#    08/22/2023, V1.7 - Merge changes from ~relet to support multiple profiles
 # -------------------------------------------------
 
-esc() { printf "%s\n" "$1" | sed -e "s/'/'\"'\"'/g" -e "1s/^/'/" -e "\$s/\$/'/" }
+PROFILE=$1
+DELAY=$2
 
-# monitor.xml path
+# what does this line actually do?
+#esc() { printf "%s\n" "$2" | sed -e "s/'/'\"'\"'/g" -e "1s/^/'/" -e "\$s/\$/'/" }
+
+# monitor.xml profile path
 MONITOR_XML="$HOME/Documents/monitors.xml"
+if [ -e  "$HOME/.config/monitors-${PROFILE}.xml" ]; then
+    MONITOR_XML="$HOME/.config/monitors-${PROFILE}.xml"
+#    printf(MONITOR_XML)
+fi
 
 # get number of declared monitors
 NUM=$(xmllint --xpath 'count(//monitors/configuration['1']/logicalmonitor)' "${MONITOR_XML}")
@@ -34,7 +47,7 @@ for (( i=1; i<=$NUM; i++)); do
   POS_X=$(xmllint --xpath '//monitors/configuration['1']/logicalmonitor['$i']/x/text()' "${MONITOR_XML}" 2>/dev/null)
   POS_Y=$(xmllint --xpath '//monitors/configuration['1']/logicalmonitor['$i']/y/text()' "${MONITOR_XML}" 2>/dev/null)
   SCALE=$(xmllint --xpath '//monitors/configuration['1']/logicalmonitor['$i']/scale/rate/text()' "${MONITOR_XML}" 2>/dev/null)
-#   ROTATE=$(xmllint --xpath '//monitors/configuration['1']/logicalmonitor['$i']/rotation/text()' $MONITOR_XML 2>/dev/null)
+  ROTATE=$(xmllint --xpath '//monitors/configuration['1']/logicalmonitor['$i']/rotation/text()' $MONITOR_XML 2>/dev/null)
   WIDTH=$(xmllint --xpath '//monitors/configuration['1']/logicalmonitor['$i']/monitor/mode/width/text()' "${MONITOR_XML}" 2>/dev/null)
   HEIGHT=$(xmllint --xpath '//monitors/configuration['1']/logicalmonitor['$i']/monitor/mode/height/text()' "${MONITOR_XML}" 2>/dev/null)
   RATE=$(xmllint --xpath '//monitors/configuration['1']/logicalmonitor['$i']/monitor/mode/rate/text()' "${MONITOR_XML}" 2>/dev/null)
@@ -57,7 +70,7 @@ for (( i=1; i<=$NUM; i++)); do
 done
 
 # if needed, wait for some seconds (for X to finish initialisation)
-[ -n "$1" ] && sleep $1
+[ -n "$DELAY" ] && sleep $DELAY
 
 # position all monitors
 xrandr "${PARAM_ARR[@]}"
